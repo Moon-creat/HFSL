@@ -47,7 +47,7 @@ def prGreen(skk): print("\033[92m {}\033[00m".format(skk))
 num_users = 5
 epochs = 100
 frac = 1  # participation of clients; if 1 then 100% clients participate in HFSLV1
-lr = 0.0005
+lr = 0.0007
 
 def branchBottleNeck(channel_in, channel_out, kernel_size):
     middle_channel = channel_out // 4
@@ -760,8 +760,8 @@ transforms.CenterCrop(64),
     transforms.Normalize(mean=mean, std=std)
 ])
 
-dataset_train = torchvision.datasets.FashionMNIST(root='./data', train=True, download=True, transform=transform_train)
-dataset_test = torchvision.datasets.FashionMNIST(root='./data', train=False, download=True, transform=transform_test)
+dataset_train = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform_train)
+dataset_test = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform_test)
 dict_users = dataset_iid(dataset_train, num_users)
 dict_users_test = dataset_iid(dataset_test, num_users)
 
@@ -803,7 +803,7 @@ for iter in range(epochs):
     print("-----------------------------------------------------------")
     w_glob_client = FedAvg(w_locals_client)
     # Update client-side global model
-    net_glob_client.load_state_dict(w_glob_client)
+    net_glob_client.load_state_dict(copy.deepcopy(w_glob_client))
 
 # ===================================================================================
 
@@ -813,7 +813,7 @@ print("Training and Evaluation completed!")
 # Save output data to .excel file (we use for comparision plots)
 round_process = [i for i in range(1, len(acc_train_collect) + 1)]
 df = DataFrame({'round': round_process, 'acc_train': acc_train_collect, 'acc_test': acc_test_collect})
-file_name =  "HFSLV1-FMNIST" + ".xlsx"
+file_name =  "HFSLV1-FMNIST-ALL2" + ".xlsx"
 df.to_excel(file_name, sheet_name="v1_test", index=False)
 
 # =============================================================================
