@@ -1,5 +1,5 @@
 # ============================================================================
-# HFSLV2 learning: ResNet18 on FMNIST
+# HFSLV2 learning: ResNet18 on MNIST
 # ============================================================================
 import torch
 from torch import nn
@@ -54,6 +54,7 @@ num_users = 5
 epochs = 100
 frac = 1  # participation of clients; if 1 then 100% clients participate in HFSLV2
 lr = 0.0005
+
 
 def branchBottleNeck(channel_in, channel_out, kernel_size):
     middle_channel = channel_out // 4
@@ -120,6 +121,7 @@ class BottleneckBlock(nn.Module):
         output = self.relu(output)
 
         return output
+
 
 # =====================================================================================================
 #                           Client-side Model definition
@@ -535,7 +537,7 @@ def train_server(fx_client, y, l_epoch_count, l_epoch, idx, len_batch, middle_ou
         if l_epoch_count == l_epoch - 1:
 
             l_epoch_check = True  # to evaluate_server function - to check local epoch has completed or not
-            
+
             acc_avg_train_all = acc_avg_train
             loss_avg_train_all = loss_avg_train
 
@@ -550,7 +552,7 @@ def train_server(fx_client, y, l_epoch_count, l_epoch, idx, len_batch, middle_ou
         # This is to check if all users are served for one round --------------------
         if len(idx_collect) == num_users:
             fed_check = True  # to evaluate_server function  - to check fed check has hitted
-            
+
             idx_collect = []
 
             acc_avg_all_user_train = sum(acc_train_collect_user) / len(acc_train_collect_user)
@@ -623,7 +625,7 @@ def evaluate_server(fx_client, y, idx, len_batch, ell):
                 acc_test_collect_user = []
                 loss_test_collect_user = []
 
-                print("====================== SERVER V2==========================")
+                print("====================== SERVER V1==========================")
                 print(' Train: Round {:3d}, Avg Accuracy {:.3f} | Avg Loss {:.3f}'.format(ell, acc_avg_all_user_train,
                                                                                           loss_avg_all_user_train))
                 print(' Test: Round {:3d}, Avg Accuracy {:.3f} | Avg Loss {:.3f}'.format(ell, acc_avg_all_user,
@@ -728,12 +730,11 @@ def dataset_iid(dataset, num_users):
 # =============================================================================
 mean = [0.485]
 std = [0.229]
-
 transform_train = transforms.Compose([transforms.RandomHorizontalFlip(),
                                       transforms.RandomVerticalFlip(),
                                       transforms.RandomAffine(degrees=0, translate=(0.1, 0.1)),
                                       transforms.RandomRotation((-10, 10)),
-transforms.CenterCrop(64),
+                                      transforms.CenterCrop(64),
                                       transforms.ToTensor(),
                                       transforms.Normalize(mean=mean, std=std)
                                       ])
@@ -744,8 +745,9 @@ transforms.CenterCrop(64),
     transforms.Normalize(mean=mean, std=std)
 ])
 
-dataset_train = torchvision.datasets.FashionMNIST(root='./data', train=True, download=True, transform=transform_train)
-dataset_test = torchvision.datasets.FashionMNIST(root='./data', train=False, download=True, transform=transform_test)
+dataset_train = torchvision.datasets.MNIST(root='./data', train=True, download=True, transform=transform_train)
+dataset_test = torchvision.datasets.MNIST(root='./data', train=False, download=True, transform=transform_test)
+
 dict_users = dataset_iid(dataset_train, num_users)
 dict_users_test = dataset_iid(dataset_test, num_users)
 
@@ -754,9 +756,9 @@ dict_users_test = dataset_iid(dataset_test, num_users)
 # this epoch is global epoch, also known as rounds
 for iter in range(epochs):
     m = max(int(frac * num_users), 1)
-    idxs_users = np.random.choice(range(num_users), m, replace=False)
+    # idxs_users = np.random.choice(range(num_users), m, replace=False)
     w_locals_client = []
-    for idx in idxs_users:
+    for idx in range(m):
         net_dict = net_glob_client.state_dict()
         local = None
         if (idx % 3 == 0):
@@ -785,7 +787,7 @@ for iter in range(epochs):
     print("-----------------------------------------------------------")
     w_glob_client = FedAvg(w_locals_client)
     # Update client-side global model
-    net_glob_client.load_state_dict(w_glob_client)
+    net_glob_client.load_state_dict(copy.deepcopy(w_glob_client))
 
 # ===================================================================================
 
@@ -795,7 +797,7 @@ print("Training and Evaluation completed!")
 # Save output data to .excel file (we use for comparision plots)
 round_process = [i for i in range(1, len(acc_train_collect) + 1)]
 df = DataFrame({'round': round_process, 'acc_train': acc_train_collect, 'acc_test': acc_test_collect})
-file_name = "HFSLV2-FMNIST" + ".xlsx"
+file_name = "HFSLV2-MNIST" + ".xlsx"
 df.to_excel(file_name, sheet_name="v1_test", index=False)
 
 # =============================================================================
